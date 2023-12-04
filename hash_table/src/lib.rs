@@ -4,13 +4,23 @@ pub enum HashTableError {
     TableFull,
 }
 
-#[derive(Debug, Default)]
-pub struct HashTableEntry {
+#[derive(Debug)]
+pub struct HashTableEntry<T> {
     pub valid: bool,
+    pub data: Box<T>,
 }
 
-pub trait HashTable<T> {
-    fn insert(&mut self, key: T, data: HashTableEntry) -> Result<(), HashTableError>;
+impl<T: Default> Default for HashTableEntry<T> {
+    fn default() -> HashTableEntry<T> {
+        HashTableEntry::<T> {
+            valid: false,
+            data: Box::new(T::default()),
+        }
+    }
+}
+
+pub trait HashTable<T, U> {
+    fn insert(&mut self, key: T, data: HashTableEntry<U>) -> Result<(), HashTableError>;
     fn delete(&mut self, key: T) -> Result<(), HashTableError>;
     fn lookup(&self, key: T) -> Result<(), HashTableError>;
 }
