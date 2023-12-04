@@ -2,9 +2,10 @@
 
 use hash_table::{HashFn, HashTable, HashTableEntry, HashTableError};
 use std::marker::PhantomData;
+use std::ops::Rem;
 
 struct BasicHash<T, U, const N: usize> {
-    data: Vec<HashTableEntry<U>>,
+    data: Vec<HashTableEntry<T, U>>,
     _phantom: PhantomData<T>,
 }
 
@@ -19,7 +20,7 @@ struct BasicHashBuilder<T, U, const N: usize> {
     _phantom_u: PhantomData<U>,
 }
 
-impl<T, U: Default, const N: usize> BasicHashBuilder<T, U, N> {
+impl<T: Default, U: Default, const N: usize> BasicHashBuilder<T, U, N> {
     fn new() -> BasicHashBuilder<T, U, N> {
         BasicHashBuilder::<T, U, N> {
             _phantom: PhantomData {},
@@ -35,18 +36,20 @@ impl<T, U: Default, const N: usize> BasicHashBuilder<T, U, N> {
 
         // initialize the hash table
         for _i in 0..N {
-            let h = HashTableEntry::<U>::default();
+            let h = HashTableEntry::<T, U>::default();
             hash.data.push(h);
         }
         hash
     }
 }
 
-impl<T, U, const N: usize> HashTable<u32, U> for BasicHash<T, U, N> {
-    fn insert(&mut self, key: u32, data: HashTableEntry<U>) -> Result<(), HashTableError> {
-        let x = self.hash(key);
+impl<T: Clone, U, const N: usize> HashTable<T, U> for BasicHash<T, U, N> {
+    fn insert(&mut self, key: T, data: U) -> Result<(), HashTableError> {
+        let x = self.hash(key.clone());
         if self.data[x].valid == false {
-            self.data[x] = data;
+            self.data[x].key = key.clone();
+            self.data[x].valid = true;
+            self.data[x].data = Box::new(data);
         } else {
             let mut y = x + 1;
             if y == N {
@@ -55,7 +58,9 @@ impl<T, U, const N: usize> HashTable<u32, U> for BasicHash<T, U, N> {
             let mut inserted = false;
             while inserted == false && y != x {
                 if self.data[y].valid == false {
-                    self.data[x] = data;
+                    self.data[y].key = key.clone();
+                    self.data[y].valid = true;
+                    self.data[y].data = Box::new(data);
                     inserted = true;
                     break;
                 } else {
@@ -71,28 +76,36 @@ impl<T, U, const N: usize> HashTable<u32, U> for BasicHash<T, U, N> {
         }
         Ok(())
     }
-    fn delete(&mut self, key: u32) -> Result<(), HashTableError> {
+    fn delete(&mut self, key: T) -> Result<(), HashTableError> {
         todo!()
     }
-    fn lookup(&self, key: u32) -> Result<(), HashTableError> {
+    fn lookup(&self, key: T) -> Result<(), HashTableError> {
         todo!()
     }
 }
 
-impl<T, U, const N: usize> HashFn<u32> for BasicHash<T, U, N> {
-    fn hash(&self, key: u32) -> usize {
-        (key % N as u32) as usize
+//impl<T, U, const N: usize> HashFn<T> for BasicHash<T, U, N> where T: std::ops::Rem<usize, Output = usize> {
+impl<T, U, const N: usize> HashFn<T> for BasicHash<T, U, N> {
+    fn hash(&self, key: T) -> usize {
+        unsafe { key % N }
     }
 }
+
+/*
 
 impl<T, U, const N: usize> HashTable<u64, U> for BasicHash<T, U, N> {
-    fn insert(&mut self, key: u64, data: HashTableEntry<U>) -> Result<(), HashTableError> {
+/*
+    fn insert(&mut self, key: u64, data: HashTableEntry<u64, U>) -> Result<(), HashTableError> {
         todo!()
     }
-    fn delete(&mut self, key: u64) -> Result<(), HashTableError> {
+*/
+    fn insert(&mut self, key: T, data: U) -> Result<(), HashTableError> {
         todo!()
     }
-    fn lookup(&self, key: u64) -> Result<(), HashTableError> {
+    fn delete(&mut self, key: T) -> Result<(), HashTableError> {
+        todo!()
+    }
+    fn lookup(&self, key: T) -> Result<(), HashTableError> {
         todo!()
     }
 }
@@ -102,6 +115,7 @@ impl<T, U, const N: usize> HashFn<u64> for BasicHash<T, U, N> {
         (key % N as u64) as usize
     }
 }
+*/
 
 #[cfg(test)]
 mod tests {
@@ -112,16 +126,21 @@ mod tests {
         let mut x = BasicHashBuilder::<u32, u16, 10>::new().build();
         assert_eq!(x.get_capacity(), 10);
         assert_eq!(x.hash(45u32), 5);
-        let item = Box::new(9999u16);
-        let data: HashTableEntry<u16> = HashTableEntry::<u16> {
+        let item = 9999u16;
+        assert!(x.insert(45u32, item).is_ok());
+/*
+        let data: HashTableEntry<u32, u16> = HashTableEntry::<u32, u16> {
+            key: 0u32,
             valid: true,
             data: item.clone(),
         };
         assert!(x.insert(45u32, data).is_ok());
-        let data: HashTableEntry<u16> = HashTableEntry::<u16> {
+        let data: HashTableEntry<u32, u16> = HashTableEntry::<u32, u16> {
+            key: 0u32,
             valid: true,
             data: item.clone(),
         };
         assert!(x.insert(45u32, data).is_ok());
+*/
     }
 }
