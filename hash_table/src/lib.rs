@@ -5,30 +5,30 @@ pub enum HashTableError {
 }
 
 #[derive(Debug)]
-pub struct HashTableEntry<T, U> {
+pub struct HashTableEntry<U> {
     pub valid: bool,
-    pub key: T,
+    pub key: u16,
     pub data: Box<U>,
 }
 
-impl<T: Default, U: Default> Default for HashTableEntry<T, U> {
-    fn default() -> HashTableEntry<T, U> {
-        HashTableEntry::<T, U> {
+impl<U: Default> Default for HashTableEntry<U> {
+    fn default() -> HashTableEntry<U> {
+        HashTableEntry::<U> {
             valid: false,
-            key: T::default(),
+            key: u16::default(),
             data: Box::new(U::default()),
         }
     }
 }
 
-pub trait HashTable<T, U> {
-    fn insert(&mut self, key: T, data: U) -> Result<(), HashTableError>;
-    fn delete(&mut self, key: T) -> Result<(), HashTableError>;
-    fn lookup(&self, key: T) -> Result<(), HashTableError>;
+pub trait HashTable<U> where U: Copy {
+    fn insert(&mut self, key: u16, data: U) -> Result<(), HashTableError>;
+    fn delete(&mut self, key: u16) -> Result<(), HashTableError>;
+    fn lookup(&self, key: u16) -> Result<U, HashTableError>;
 }
 
-pub trait HashFn<T> {
-    fn hash(&self, key: T) -> usize;
+pub trait HashFn {
+    fn hash(&self, key: u16) -> u16;
 }
 
 #[cfg(test)]
