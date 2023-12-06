@@ -47,7 +47,7 @@ impl<U: Default> BasicHashBuilder<U> {
     }
 }
 
-impl<U: std::marker::Copy> HashTable<U> for BasicHash<U> {
+impl<U: std::marker::Copy + std::fmt::Debug> HashTable<U> for BasicHash<U> {
     fn insert(&mut self, key: u16, data: U) -> Result<(), HashTableError> {
         let x : usize = self.hash(key.clone()).into();
         if self.data[x].valid == false {
@@ -81,7 +81,34 @@ impl<U: std::marker::Copy> HashTable<U> for BasicHash<U> {
         Ok(())
     }
     fn delete(&mut self, key: u16) -> Result<(), HashTableError> {
-        todo!()
+        let x : usize = self.hash(key.clone()).into();
+        if self.data[x].valid == false {
+            return Err(HashTableError::NotFound);
+        }
+        if self.data[x].key == key {
+            //std::mem::drop(self.data[x].data);
+            println!("data is {:?}", self.data[x].data);
+            self.data[x].valid = false;
+            return Ok(());
+        } else {
+            let mut y = x+1;
+            if y == self.get_capacity().into() {
+                y = 0;
+            }
+            while y != x && self.data[x].valid && self.data[y].key != key {
+                y += 1;
+                if y == self.get_capacity().into() {
+                    y = 0;
+                }
+            }
+            if self.data[y].valid == true && self.data[y].key == key {
+                //std::mem::drop(self.data[x].data);
+            println!("data is {:?}", self.data[x].data);
+                self.data[x].valid = false;
+                return Ok(());
+            }
+        }
+        return Err(HashTableError::NotFound);
     }
     fn lookup(&self, key: u16) -> Result<U, HashTableError> 
         where U : Copy {
@@ -182,6 +209,73 @@ mod tests {
         assert!(ret.is_ok());
         assert_eq!(ret.unwrap(), 30);
         let ret = x.lookup(17);
+        assert_eq!(ret.is_ok(), false);
+    }
+        
+    #[test]
+    fn can_create_basic_hash_and_delete() {
+        let mut x = BasicHashBuilder::<u16>::new().with_capacity(3).build();
+        assert_eq!(x.get_capacity(), 3);
+        let mut item = 10;
+        assert!(x.insert(1, item).is_ok());
+        item += 10;
+        assert!(x.insert(2, item).is_ok());
+        item += 10;
+        assert!(x.insert(3, item).is_ok());
+    
+        let ret = x.lookup(1);
+        assert!(ret.is_ok());
+        assert_eq!(ret.unwrap(), 10);
+        let ret = x.lookup(2);
+        assert!(ret.is_ok());
+        assert_eq!(ret.unwrap(), 20);
+        let ret = x.lookup(3);
+        assert!(ret.is_ok());
+        assert_eq!(ret.unwrap(), 30);
+
+        let ret = x.delete(1);
+        assert!(ret.is_ok());
+        let ret = x.lookup(1);
+        assert_eq!(ret.is_ok(), false);
+        let ret = x.delete(2);
+        assert!(ret.is_ok());
+        let ret = x.lookup(2);
+        assert_eq!(ret.is_ok(), false);
+        let ret = x.delete(3);
+        assert!(ret.is_ok());
+        let ret = x.lookup(3);
+        assert_eq!(ret.is_ok(), false);
+
+        // see if we can insert them again
+
+        let mut item = 100;
+        assert!(x.insert(1, item).is_ok());
+        item += 100;
+        assert!(x.insert(2, item).is_ok());
+        item += 100;
+        assert!(x.insert(3, item).is_ok());
+    
+        let ret = x.lookup(1);
+        assert!(ret.is_ok());
+        assert_eq!(ret.unwrap(), 100);
+        let ret = x.lookup(2);
+        assert!(ret.is_ok());
+        assert_eq!(ret.unwrap(), 200);
+        let ret = x.lookup(3);
+        assert!(ret.is_ok());
+        assert_eq!(ret.unwrap(), 300);
+
+        let ret = x.delete(1);
+        assert!(ret.is_ok());
+        let ret = x.lookup(1);
+        assert_eq!(ret.is_ok(), false);
+        let ret = x.delete(2);
+        assert!(ret.is_ok());
+        let ret = x.lookup(2);
+        assert_eq!(ret.is_ok(), false);
+        let ret = x.delete(3);
+        assert!(ret.is_ok());
+        let ret = x.lookup(3);
         assert_eq!(ret.is_ok(), false);
     }
         
