@@ -8,7 +8,7 @@ pub enum HashTableError {
 pub struct HashTableEntry<U> {
     pub valid: bool,
     pub key: u16,
-    pub data: Box<U>,
+    pub data: Option<Box<U>>,
 }
 
 impl<U: Default> Default for HashTableEntry<U> {
@@ -16,7 +16,7 @@ impl<U: Default> Default for HashTableEntry<U> {
         HashTableEntry::<U> {
             valid: false,
             key: u16::default(),
-            data: Box::new(U::default()),
+            data: None,
         }
     }
 }

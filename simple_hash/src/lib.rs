@@ -53,7 +53,7 @@ impl<U: std::marker::Copy + std::fmt::Debug> HashTable<U> for BasicHash<U> {
         if self.data[x].valid == false {
             self.data[x].key = key.clone();
             self.data[x].valid = true;
-            self.data[x].data = Box::new(data);
+            self.data[x].data = Some(Box::new(data));
         } else {
             let mut y = x + 1;
             if y == self.get_capacity().into() {
@@ -64,7 +64,7 @@ impl<U: std::marker::Copy + std::fmt::Debug> HashTable<U> for BasicHash<U> {
                 if self.data[y].valid == false {
                     self.data[y].key = key.clone();
                     self.data[y].valid = true;
-                    self.data[y].data = Box::new(data);
+                    self.data[y].data = Some(Box::new(data));
                     inserted = true;
                     break;
                 } else {
@@ -89,6 +89,7 @@ impl<U: std::marker::Copy + std::fmt::Debug> HashTable<U> for BasicHash<U> {
             //std::mem::drop(self.data[x].data);
             println!("data is {:?}", self.data[x].data);
             self.data[x].valid = false;
+            self.data[x].data = None;
             return Ok(());
         } else {
             let mut y = x+1;
@@ -105,6 +106,7 @@ impl<U: std::marker::Copy + std::fmt::Debug> HashTable<U> for BasicHash<U> {
                 //std::mem::drop(self.data[x].data);
             println!("data is {:?}", self.data[x].data);
                 self.data[x].valid = false;
+                self.data[x].data = None;
                 return Ok(());
             }
         }
@@ -117,7 +119,7 @@ impl<U: std::marker::Copy + std::fmt::Debug> HashTable<U> for BasicHash<U> {
             return Err(HashTableError::NotFound);
         }
         if self.data[x].key == key {
-            return Ok(*self.data[x].data);
+            return Ok(**self.data[x].data.as_ref().unwrap());
         } else {
             let mut y = x+1;
             if y == self.get_capacity().into() {
@@ -130,7 +132,7 @@ impl<U: std::marker::Copy + std::fmt::Debug> HashTable<U> for BasicHash<U> {
                 }
             }
             if self.data[y].valid == true && self.data[y].key == key {
-                return Ok(*self.data[y].data);
+                return Ok(**self.data[y].data.as_ref().unwrap());
             }
         }
         return Err(HashTableError::NotFound);
