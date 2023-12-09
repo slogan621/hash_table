@@ -86,8 +86,6 @@ impl<U: std::marker::Copy + std::fmt::Debug> HashTable<U> for BasicHash<U> {
             return Err(HashTableError::NotFound);
         }
         if self.data[x].key == key {
-            //std::mem::drop(self.data[x].data);
-            println!("data is {:?}", self.data[x].data);
             self.data[x].valid = false;
             self.data[x].data = None;
             return Ok(());
@@ -103,8 +101,6 @@ impl<U: std::marker::Copy + std::fmt::Debug> HashTable<U> for BasicHash<U> {
                 }
             }
             if self.data[y].valid == true && self.data[y].key == key {
-                //std::mem::drop(self.data[x].data);
-            println!("data is {:?}", self.data[x].data);
                 self.data[x].valid = false;
                 self.data[x].data = None;
                 return Ok(());
@@ -145,32 +141,6 @@ impl<U> HashFn for BasicHash<U> {
         key % self.get_capacity()
     }
 }
-
-/*
-
-impl<T, U, const N: T> HashTable<u64, U> for BasicHash<T, U, N> {
-/*
-    fn insert(&mut self, key: u64, data: HashTableEntry<u64, U>) -> Result<(), HashTableError> {
-        todo!()
-    }
-*/
-    fn insert(&mut self, key: T, data: U) -> Result<(), HashTableError> {
-        todo!()
-    }
-    fn delete(&mut self, key: T) -> Result<(), HashTableError> {
-        todo!()
-    }
-    fn lookup(&self, key: T) -> Result<(), HashTableError> {
-        todo!()
-    }
-}
-
-impl<T, U, const N: T> HashFn<u64> for BasicHash<T, U, N> {
-    fn hash(&self, key: u64) -> T {
-        (key % N as u64) as T
-    }
-}
-*/
 
 #[cfg(test)]
 mod tests {
@@ -280,19 +250,4 @@ mod tests {
         let ret = x.lookup(3);
         assert_eq!(ret.is_ok(), false);
     }
-        
-/*
-        let data: HashTableEntry<u32, u16> = HashTableEntry::<u32, u16> {
-            key: 0u32,
-            valid: true,
-            data: item.clone(),
-        };
-        assert!(x.insert(45u32, data).is_ok());
-        let data: HashTableEntry<u32, u16> = HashTableEntry::<u32, u16> {
-            key: 0u32,
-            valid: true,
-            data: item.clone(),
-        };
-        assert!(x.insert(45u32, data).is_ok());
-*/
 }
