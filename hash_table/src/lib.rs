@@ -4,7 +4,7 @@ pub enum HashTableError {
     TableFull,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct HashTableEntry<U> {
     pub valid: bool,
     pub key: u16,
