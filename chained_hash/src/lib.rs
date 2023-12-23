@@ -3,56 +3,61 @@
 use hash_table::{HashFn, HashTable, HashTableEntry, HashTableError};
 use std::marker::PhantomData;
 
-#[derive(Debug, Default, PartialEq)]
-struct ChainedHashEntry<U>
-where
-    HashTableEntry<U>: PartialEq,
-{
+use std::mem;
+
+// below inspired by https://rust-unofficial.github.io/too-many-lists/first-final.html
+// iterator impl is original code after some trial and error
+
+#[derive(Debug, PartialEq)]
+pub struct List<U> {
+    head: Link<U>,
+}
+
+#[derive(Debug, PartialEq)]
+enum Link<U> {
+    Empty,
+    More(Box<ChainedHashEntry<U>>),
+}
+
+#[derive(Debug, PartialEq)]
+struct ChainedHashEntry<U> {
     data: HashTableEntry<U>,
-    next: Option<Box<ChainedHashEntry<U>>>,
+    next: Link<U>,
 }
 
 struct ChainedHash<U: std::cmp::PartialEq> {
-    table: Vec<Option<Box<ChainedHashEntry<U>>>>,
+    table: Vec<List<U>>,
     capacity: u16,
 }
 
 #[derive(Debug)]
 struct ChainedHashIterator<'a, U: std::cmp::PartialEq> {
-    next: &'a Option<Box<ChainedHashEntry<U>>>,
+    next: &'a Link<U>,
 }
 
 impl<'a, U: std::cmp::PartialEq + std::fmt::Debug> Iterator for ChainedHashIterator<'a, U> {
-    type Item = &'a Box<ChainedHashEntry<U>>;
+    type Item = &'a Link<U>;
 
-    // Here, we define the sequence using `.curr` and `.next`.
-    // The return type is `Option<T>`:
-    //     * When the `Iterator` is finished, `None` is returned.
-    //     * Otherwise, the next value is wrapped in `Some` and returned.
-    // We use Self::Item in the return type, so we can change
-    // the type without having to update the function signatures.
     fn next(&mut self) -> Option<Self::Item> {
-        println!(
-            "************ in next self is {:?} self.next is {:?}",
-            self, self.next
-        );
+
         let current = self.next;
 
-        if current.is_some() {
-            self.next = &current.as_ref().unwrap().next;
-            println!("************ in next returning current {:?}", current);
-            return current.as_ref();
-        } else {
-            self.next = &None;
-            println!("**************  in next returning None");
-            None
+        match &*current {
+            Link::Empty => {
+                self.next = &Link::Empty;
+                None
+            },
+            Link::More(node) => {
+                self.next = &node.next;
+                Some(current)
+            }
         }
     }
 }
 
-impl<U: std::cmp::PartialEq> ChainedHashEntry<U> {
+impl<U: std::cmp::PartialEq> List<U> {
     fn iter(&self) -> ChainedHashIterator<'_, U> {
-        ChainedHashIterator { next: &self.next }
+        ChainedHashIterator {next: &self.head }
     }
 }
 
@@ -88,9 +93,7 @@ impl<U: Default + std::cmp::PartialEq> ChainedHashBuilder<U> {
 
         // initialize the hash table
         for _i in 0..self.capacity {
-            hash.table.push(None);
-            //let h = ChainedHashEntry::<U>::default();
-            //hash.table.push(Some(Box::new(h)));
+            hash.table.push(List { head: Link::Empty });
         }
         hash
     }
@@ -100,32 +103,18 @@ impl<U: std::marker::Copy + std::fmt::Debug + std::cmp::PartialEq> HashTable<U> 
     fn insert(&mut self, key: u16, data: U) -> Result<(), HashTableError> {
         let x: usize = self.hash(key.clone()).into();
 
-        println!("insert key {:?} hashed to {:?}", key, x);
-
         let data = HashTableEntry::<U> {
             valid: true,
             key: key,
             data: Some(Box::new(data)),
         };
 
-        let mut entry = ChainedHashEntry::<U> {
+        let entry = ChainedHashEntry::<U> {
             data: data,
-            next: None,
+            next: mem::replace(&mut self.table[x].head, Link::Empty),
         };
 
-        println!("table entry before is {:?}", self.table[x]);
-        if self.table[x] != None {
-            println!(
-                "table x is not empty contains {:?}",
-                self.table[x].as_ref().unwrap()
-            );
-            let che = self.table[x].take();
-            entry.next = che;
-        }
-        self.table[x] = Some(Box::new(entry));
-
-        println!("table entry after is {:?}", self.table[x]);
-
+        self.table[x].head = Link::More(Box::new(entry));
         Ok(())
     }
     fn delete(&mut self, _key: u16) -> Result<(), HashTableError> {
@@ -167,31 +156,21 @@ impl<U: std::marker::Copy + std::fmt::Debug + std::cmp::PartialEq> HashTable<U> 
     {
         let x: usize = self.hash(key.clone()).into();
 
-        println!("Searching for {:?} in table entry {:?}", key, x);
-        println!("Table[x] is {:?}", self.table[x]);
-        println!("Table is {:?}", self.table);
-
-        // TODO: iterator returns the second element in the table,
-        // not the first. Need to fix this so we can remove the
-        // else if below that handles the first entry.
-
-        if self.table[x] == None {
+        if self.table[x] == (List { head: Link::Empty }) {
             return Err(HashTableError::NotFound);
-        } else if self.table[x].as_ref().unwrap().data.key == key {
-            return Ok(**(self.table[x].as_ref().unwrap().data.data.as_ref().unwrap()));
         }
 
-        for ent in &self.table[x] {
-            for y in ent.iter() {
-                println!("************ y is {:?}", y);
-                if y.data.key == key {
-                    println!("Found it !!!!!!!!!!!\n");
-                    return Ok(**(y.data.data.as_ref()).unwrap());
-                }
+        for elem in self.table[x].iter() {
+            match elem {
+                Link::More(value) => {
+                    if value.data.key == key {
+                        return Ok(**(value.data.data.as_ref()).unwrap());
+                    }
+                },
+                _ => {},
             }
         }
 
-        println!("Did not find it\n");
         return Err(HashTableError::NotFound);
     }
 }
