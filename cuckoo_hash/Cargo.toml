@@ -1,5 +1,5 @@
 [package]
-name = "cookoo_hash"
+name = "cuckoo_hash"
 version = "0.1.0"
 edition = "2021"
 
