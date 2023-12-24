@@ -113,42 +113,66 @@ impl<U: std::marker::Copy + std::fmt::Debug + std::cmp::PartialEq> HashTable<U> 
             data: data,
             next: mem::replace(&mut self.table[x].head, Link::Empty),
         };
-
         self.table[x].head = Link::More(Box::new(entry));
         Ok(())
     }
-    fn delete(&mut self, _key: u16) -> Result<(), HashTableError> {
-        todo!();
-        /*
-                let x : usize = self.hash(key.clone()).into();
-                if self.data[x] == None {
-                    return Err(HashTableError::NotFound);
-                }
 
+    fn delete(&mut self, key: u16) -> Result<(), HashTableError> {
+        let x : usize = self.hash(key.clone()).into();
+        if self.table[x] == (List { head: Link::Empty }) {
+            return Err(HashTableError::NotFound);
+        }
 
-                if self.data[x].unwrap().data.key == key {
-                    self.data[x].valid = false;
-                    self.data[x].data = None;
-                    return Ok(());
-                } else {
-                    let mut y = x+1;
-                    if y == self.get_capacity().into() {
-                        y = 0;
-                    }
-                    while y != x && self.data[x].valid && self.data[y].key != key {
-                        y += 1;
-                        if y == self.get_capacity().into() {
-                            y = 0;
+        let mut prev = &Link::Empty;
+        let mut cur = &self.table[x].head;
+
+        loop {
+            match cur {
+                Link::More(ref value) => {
+                    println!("top of loop value is {:?}", value);
+                    if value.data.key == key {
+                        if prev == &Link::Empty {
+                            // head of list
+                            println!("deleting key {:?} from head of list",
+                                key);
+                            self.table[x].head = Link::Empty;
+                        } else {
+                            println!("deleting key {:?} from middle of list",
+                                key);
+                            println!("before replace prev {:?} cur {:?}",
+prev, cur);
+                            //let prev = mem::replace(&mut prev, &*cur);
+                            let _ = mem::replace(&mut prev, cur);
+                            println!("after replace prev {:?} cur {:?}",
+prev, cur);
+                            println!("after replace table {:?}", self.table[x]);
                         }
-                    }
-                    if self.data[y].valid == true && self.data[y].key == key {
-                        self.data[x].valid = false;
-                        self.data[x].data = None;
                         return Ok(());
+                    } else {
+                        prev = cur;
+                        cur = &value.next;
                     }
-                }
-                return Err(HashTableError::NotFound);
-        */
+                },
+                _ => {}, // can't really happen
+            }
+        }
+/*
+        for elem in self.table[x].iter() {
+            match elem {
+                Link::More(value) => {
+                    if value.data.key == key {
+                        let _ = mem::replace(&mut prev, &value.next);
+                        return Ok(());
+                    } else {
+                        prev = &value.next;
+                    }
+                },
+                _ => {}, // can't really happen
+            }
+        }
+*/
+
+        Err(HashTableError::NotFound)
     }
     fn lookup(&self, key: u16) -> Result<U, HashTableError>
     where
@@ -239,7 +263,6 @@ mod tests {
         assert_eq!(ret.is_ok(), false);
     }
 
-    /*
         #[test]
         fn can_create_basic_hash_and_delete() {
             let mut x = ChainedHashBuilder::<u16>::new().with_capacity(3).build();
@@ -250,6 +273,12 @@ mod tests {
             assert!(x.insert(2, item).is_ok());
             item += 10;
             assert!(x.insert(3, item).is_ok());
+            item += 10;
+            assert!(x.insert(4, item).is_ok());
+            item += 10;
+            assert!(x.insert(5, item).is_ok());
+            item += 10;
+            assert!(x.insert(6, item).is_ok());
 
             let ret = x.lookup(1);
             assert!(ret.is_ok());
@@ -260,6 +289,15 @@ mod tests {
             let ret = x.lookup(3);
             assert!(ret.is_ok());
             assert_eq!(ret.unwrap(), 30);
+            let ret = x.lookup(4);
+            assert!(ret.is_ok());
+            assert_eq!(ret.unwrap(), 40);
+            let ret = x.lookup(5);
+            assert!(ret.is_ok());
+            assert_eq!(ret.unwrap(), 50);
+            let ret = x.lookup(6);
+            assert!(ret.is_ok());
+            assert_eq!(ret.unwrap(), 60);
 
             let ret = x.delete(1);
             assert!(ret.is_ok());
@@ -272,6 +310,18 @@ mod tests {
             let ret = x.delete(3);
             assert!(ret.is_ok());
             let ret = x.lookup(3);
+            assert_eq!(ret.is_ok(), false);
+            let ret = x.delete(4);
+            assert!(ret.is_ok());
+            let ret = x.lookup(4);
+            assert_eq!(ret.is_ok(), false);
+            let ret = x.delete(5);
+            assert!(ret.is_ok());
+            let ret = x.lookup(5);
+            assert_eq!(ret.is_ok(), false);
+            let ret = x.delete(6);
+            assert!(ret.is_ok());
+            let ret = x.lookup(6);
             assert_eq!(ret.is_ok(), false);
 
             // see if we can insert them again
@@ -306,5 +356,4 @@ mod tests {
             let ret = x.lookup(3);
             assert_eq!(ret.is_ok(), false);
         }
-    */
 }
