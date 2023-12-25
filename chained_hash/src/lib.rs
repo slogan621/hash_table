@@ -8,15 +8,11 @@ use std::mem;
 // below inspired by https://rust-unofficial.github.io/too-many-lists/first-final.html
 // iterator impl is original code after some trial and error
 
+type Link<U> = Option<Box<ChainedHashEntry<U>>>;
+
 #[derive(Debug, PartialEq)]
 pub struct List<U> {
     head: Link<U>,
-}
-
-#[derive(Debug, PartialEq)]
-enum Link<U> {
-    Empty,
-    More(Box<ChainedHashEntry<U>>),
 }
 
 #[derive(Debug, PartialEq)]
@@ -43,11 +39,11 @@ impl<'a, U: std::cmp::PartialEq + std::fmt::Debug> Iterator for ChainedHashItera
         let current = self.next;
 
         match &*current {
-            Link::Empty => {
-                self.next = &Link::Empty;
+            None => {
+                self.next = &None;
                 None
             },
-            Link::More(node) => {
+            Some(node) => {
                 self.next = &node.next;
                 Some(current)
             }
@@ -93,7 +89,7 @@ impl<U: Default + std::cmp::PartialEq> ChainedHashBuilder<U> {
 
         // initialize the hash table
         for _i in 0..self.capacity {
-            hash.table.push(List { head: Link::Empty });
+            hash.table.push(List { head: None });
         }
         hash
     }
@@ -111,51 +107,65 @@ impl<U: std::marker::Copy + std::fmt::Debug + std::cmp::PartialEq> HashTable<U> 
 
         let entry = ChainedHashEntry::<U> {
             data: data,
-            next: mem::replace(&mut self.table[x].head, Link::Empty),
+            next: mem::replace(&mut self.table[x].head, None),
         };
-        self.table[x].head = Link::More(Box::new(entry));
+        self.table[x].head = Some(Box::new(entry));
         Ok(())
     }
 
     fn delete(&mut self, key: u16) -> Result<(), HashTableError> {
         let x : usize = self.hash(key.clone()).into();
-        if self.table[x] == (List { head: Link::Empty }) {
+        if self.table[x] == (List { head: None }) {
             return Err(HashTableError::NotFound);
         }
 
-        let mut prev = &Link::Empty;
+        let mut prev = None;
         let mut cur = &self.table[x].head;
 
         loop {
             match cur {
-                Link::More(ref value) => {
+                Some(ref value) => {
                     println!("top of loop value is {:?}", value);
                     if value.data.key == key {
-                        if prev == &Link::Empty {
+                        if prev == None.as_ref() {
                             // head of list
                             println!("deleting key {:?} from head of list",
                                 key);
-                            self.table[x].head = Link::Empty;
+                            self.table[x].head = None;
+                            //let _ = mem::replace(&self.table[x].head, Link::More(*value));
                         } else {
                             println!("deleting key {:?} from middle of list",
                                 key);
                             println!("before replace prev {:?} cur {:?}",
 prev, cur);
                             //let prev = mem::replace(&mut prev, &*cur);
-                            let _ = mem::replace(&mut prev, cur);
+                            let _ = mem::replace(&mut prev, Some(cur));
                             println!("after replace prev {:?} cur {:?}",
 prev, cur);
                             println!("after replace table {:?}", self.table[x]);
                         }
                         return Ok(());
                     } else {
-                        prev = cur;
+                        prev = Some(cur);
                         cur = &value.next;
                     }
                 },
                 _ => {}, // can't really happen
             }
         }
+
+/*
+        println!("before delete table {:?}", self.table[x]);
+        //let mut cur_link = mem::replace(&mut self.table[x].head, None);
+        let &mut cur_link = &mut self.table[x].head;
+        let mut prev_link = &None;
+        
+        while let Some(ref boxed_node) = cur_link {
+            //cur_link = mem::replace(&mut boxed_node.next, None);
+            prev_link = &cur_link;
+            cur_link = boxed_node.next
+        }
+        println!("after delete table {:?}", self.table[x]);
 /*
         for elem in self.table[x].iter() {
             match elem {
@@ -171,6 +181,7 @@ prev, cur);
             }
         }
 */
+*/
 
         Err(HashTableError::NotFound)
     }
@@ -180,13 +191,13 @@ prev, cur);
     {
         let x: usize = self.hash(key.clone()).into();
 
-        if self.table[x] == (List { head: Link::Empty }) {
+        if self.table[x] == (List { head: None }) {
             return Err(HashTableError::NotFound);
         }
 
         for elem in self.table[x].iter() {
             match elem {
-                Link::More(value) => {
+                Some(value) => {
                     if value.data.key == key {
                         return Ok(**(value.data.data.as_ref()).unwrap());
                     }
