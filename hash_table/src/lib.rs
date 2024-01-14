@@ -6,7 +6,6 @@ pub enum HashTableError {
 
 #[derive(Debug, PartialEq)]
 pub struct HashTableEntry<U> {
-    pub valid: bool,
     pub key: u16,
     pub data: Option<Box<U>>,
 }
@@ -14,7 +13,6 @@ pub struct HashTableEntry<U> {
 impl<U: Default> Default for HashTableEntry<U> {
     fn default() -> HashTableEntry<U> {
         HashTableEntry::<U> {
-            valid: false,
             key: u16::default(),
             data: None,
         }

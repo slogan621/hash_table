@@ -99,7 +99,6 @@ impl<U: std::marker::Copy + std::fmt::Debug + std::cmp::PartialEq> HashTable<U> 
         let x: usize = self.hash(key.clone()).into();
 
         let data = HashTableEntry::<U> {
-            valid: true,
             key: key,
             data: Some(Box::new(data)),
         };

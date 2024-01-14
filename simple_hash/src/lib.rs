@@ -50,9 +50,8 @@ impl<U: Default> BasicHashBuilder<U> {
 impl<U: std::marker::Copy + std::fmt::Debug> HashTable<U> for BasicHash<U> {
     fn insert(&mut self, key: u16, data: U) -> Result<(), HashTableError> {
         let x : usize = self.hash(key.clone()).into();
-        if self.data[x].valid == false {
+        if self.data[x].data.is_none() {
             self.data[x].key = key.clone();
-            self.data[x].valid = true;
             self.data[x].data = Some(Box::new(data));
         } else {
             let mut y = x + 1;
@@ -61,9 +60,8 @@ impl<U: std::marker::Copy + std::fmt::Debug> HashTable<U> for BasicHash<U> {
             }
             let mut inserted = false;
             while inserted == false && y != x {
-                if self.data[y].valid == false {
+                if self.data[y].data.is_none() {
                     self.data[y].key = key.clone();
-                    self.data[y].valid = true;
                     self.data[y].data = Some(Box::new(data));
                     inserted = true;
                     break;
@@ -93,7 +91,7 @@ impl<U: std::marker::Copy + std::fmt::Debug> HashTable<U> for BasicHash<U> {
     fn lookup(&self, key: u16) -> Result<U, HashTableError> 
         where U : Copy {
         let x : usize = self.hash(key.clone()).into();
-        if self.data[x].valid == false {
+        if self.data[x].data.is_none() {
             return Err(HashTableError::NotFound);
         }
         if self.data[x].key == key {
@@ -103,13 +101,13 @@ impl<U: std::marker::Copy + std::fmt::Debug> HashTable<U> for BasicHash<U> {
             if y == self.get_capacity().into() {
                 y = 0;
             }
-            while y != x && self.data[x].valid && self.data[y].key != key {
+            while y != x && self.data[x].data.is_some() && self.data[y].key != key {
                 y += 1;
                 if y == self.get_capacity().into() {
                     y = 0;
                 }
             }
-            if self.data[y].valid == true && self.data[y].key == key {
+            if self.data[y].data.is_some() && self.data[y].key == key {
                 return Ok(**self.data[y].data.as_ref().unwrap());
             }
         }
