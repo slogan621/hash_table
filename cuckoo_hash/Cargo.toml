@@ -8,4 +8,5 @@ edition = "2021"
 [dependencies]
 
 hash_table = { path = "../hash_table" }
+rand = "0.8.5"
 

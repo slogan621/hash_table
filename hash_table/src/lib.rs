@@ -4,7 +4,7 @@ pub enum HashTableError {
     TableFull,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct HashTableEntry<U> {
     pub key: u16,
     pub data: Option<Box<U>>,
