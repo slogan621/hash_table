@@ -151,15 +151,25 @@ impl<U: Default + std::marker::Copy + std::fmt::Debug> HashTable<U> for CuckooHa
         Ok(())
     }
 
-    fn delete(&mut self, _key: u16) -> Result<(), HashTableError> {
-        // deletion in hash tables of this type requires that all
-        // entries that would have collided with the entry being
-        // deleted be reinserted. Otherwise, a search for one of
-        // these colliding keys would fail by returning early as
-        // it encounters an empty entry. A hash table better
-        // suited to deletions would be chained-hash.
-
-        unimplemented!();
+    /// delete means finding the value in either primary or
+    /// secondary tables and clearing it, which is O(1)
+    fn delete(&mut self, key: u16) -> Result<(), HashTableError> {
+        let x: usize = self.hash(key.clone()).into();
+        if self.primary[x].data.is_none() || self.primary[x].key != key {
+            let x: usize = self.secondary_hash(key.clone()).into();
+            if self.secondary[x].data.is_none() || self.secondary[x].key != key {
+                // not found
+                return Ok(());
+            } else {
+                let h = HashTableEntry::<U>::default();
+                self.secondary[x] = h;
+                return Ok(());
+            }
+        } else {
+            let h = HashTableEntry::<U>::default();
+            self.primary[x] = h;
+            return Ok(());
+        }
     }
 
     /// lookup means finding the value in either primary or
@@ -289,6 +299,102 @@ mod tests {
         assert!(ret.is_ok());
         assert_eq!(ret.unwrap(), 40);
         let ret = x.lookup(17);
+        assert_eq!(ret.is_ok(), false);
+    }
+
+    #[test]
+    fn can_create_cuckoo_hash_and_delete() {
+        let mut x = CuckooHashBuilder::<u16>::new()
+            .with_hash_capacity(3)
+            .build();
+        assert_eq!(x.get_hash_capacity(), 3);
+        let mut item = 10;
+        assert!(x.insert(1, item).is_ok());
+        item += 10;
+        assert!(x.insert(2, item).is_ok());
+        item += 10;
+        assert!(x.insert(3, item).is_ok());
+        item += 10;
+        assert!(x.insert(4, item).is_ok());
+        item += 10;
+        assert!(x.insert(5, item).is_ok());
+        item += 10;
+        assert!(x.insert(6, item).is_ok());
+
+        let ret = x.lookup(1);
+        assert!(ret.is_ok());
+        assert_eq!(ret.unwrap(), 10);
+        let ret = x.lookup(2);
+        assert!(ret.is_ok());
+        assert_eq!(ret.unwrap(), 20);
+        let ret = x.lookup(3);
+        assert!(ret.is_ok());
+        assert_eq!(ret.unwrap(), 30);
+        let ret = x.lookup(4);
+        assert!(ret.is_ok());
+        assert_eq!(ret.unwrap(), 40);
+        let ret = x.lookup(5);
+        assert!(ret.is_ok());
+        assert_eq!(ret.unwrap(), 50);
+        let ret = x.lookup(6);
+        assert!(ret.is_ok());
+        assert_eq!(ret.unwrap(), 60);
+
+        let ret = x.delete(1);
+        assert!(ret.is_ok());
+        let ret = x.lookup(1);
+        assert_eq!(ret.is_ok(), false);
+        let ret = x.delete(2);
+        assert!(ret.is_ok());
+        let ret = x.lookup(2);
+        assert_eq!(ret.is_ok(), false);
+        let ret = x.delete(3);
+        assert!(ret.is_ok());
+        let ret = x.lookup(3);
+        assert_eq!(ret.is_ok(), false);
+        let ret = x.delete(4);
+        assert!(ret.is_ok());
+        let ret = x.lookup(4);
+        assert_eq!(ret.is_ok(), false);
+        let ret = x.delete(5);
+        assert!(ret.is_ok());
+        let ret = x.lookup(5);
+        assert_eq!(ret.is_ok(), false);
+        let ret = x.delete(6);
+        assert!(ret.is_ok());
+        let ret = x.lookup(6);
+        assert_eq!(ret.is_ok(), false);
+
+        // see if we can insert them again
+
+        let mut item = 100;
+        assert!(x.insert(1, item).is_ok());
+        item += 100;
+        assert!(x.insert(2, item).is_ok());
+        item += 100;
+        assert!(x.insert(3, item).is_ok());
+
+        let ret = x.lookup(1);
+        assert!(ret.is_ok());
+        assert_eq!(ret.unwrap(), 100);
+        let ret = x.lookup(2);
+        assert!(ret.is_ok());
+        assert_eq!(ret.unwrap(), 200);
+        let ret = x.lookup(3);
+        assert!(ret.is_ok());
+        assert_eq!(ret.unwrap(), 300);
+
+        let ret = x.delete(1);
+        assert!(ret.is_ok());
+        let ret = x.lookup(1);
+        assert_eq!(ret.is_ok(), false);
+        let ret = x.delete(2);
+        assert!(ret.is_ok());
+        let ret = x.lookup(2);
+        assert_eq!(ret.is_ok(), false);
+        let ret = x.delete(3);
+        assert!(ret.is_ok());
+        let ret = x.lookup(3);
         assert_eq!(ret.is_ok(), false);
     }
 }
