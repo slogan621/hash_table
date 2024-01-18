@@ -96,7 +96,7 @@ impl<U: Default + std::cmp::PartialEq> ChainedHashBuilder<U> {
 
 impl<U: std::marker::Copy + std::fmt::Debug + std::cmp::PartialEq> HashTable<U> for ChainedHash<U> {
     fn insert(&mut self, key: u16, data: U) -> Result<(), HashTableError> {
-        let x: usize = self.hash(key.clone()).into();
+        let x: usize = self.hash(key).into();
 
         let data = HashTableEntry::<U> {
             key: key,
@@ -113,7 +113,7 @@ impl<U: std::marker::Copy + std::fmt::Debug + std::cmp::PartialEq> HashTable<U> 
 
     fn delete(&mut self, key: u16) -> Result<(), HashTableError> {
 
-        let x: usize = self.hash(key.clone()).into();
+        let x: usize = self.hash(key).into();
         if self.table[x] == (List { head: None }) {
             return Err(HashTableError::NotFound);
         }
@@ -140,7 +140,7 @@ impl<U: std::marker::Copy + std::fmt::Debug + std::cmp::PartialEq> HashTable<U> 
     where
         U: Copy,
     {
-        let x: usize = self.hash(key.clone()).into();
+        let x: usize = self.hash(key).into();
 
         if self.table[x] == (List { head: None }) {
             return Err(HashTableError::NotFound);

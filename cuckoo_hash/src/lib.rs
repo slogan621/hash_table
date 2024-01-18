@@ -121,9 +121,9 @@ impl<U: Default + std::marker::Copy + std::fmt::Debug> HashTable<U> for CuckooHa
         let mut p_key = key;
         let mut p_data = data;
         for _ in 0..MAX_SECONDARY_HASH_ITERATIONS {
-            let h1: usize = self.hash(p_key.clone()).into();
+            let h1: usize = self.hash(p_key).into();
             if self.primary[h1].data.is_none() {
-                self.primary[h1].key = key.clone();
+                self.primary[h1].key = key;
                 self.primary[h1].data = Some(Box::new(p_data));
                 return Ok(());
             }
@@ -133,9 +133,9 @@ impl<U: Default + std::marker::Copy + std::fmt::Debug> HashTable<U> for CuckooHa
             self.primary[h1].data = Some(Box::new(p_data));
             p_key = temp_key;
             p_data = temp_data;
-            let h2: usize = self.secondary_hash(p_key.clone()).into();
+            let h2: usize = self.secondary_hash(p_key).into();
             if self.secondary[h2].data.is_none() {
-                self.secondary[h2].key = p_key.clone();
+                self.secondary[h2].key = p_key;
                 self.secondary[h2].data = Some(Box::new(p_data));
                 return Ok(());
             }
@@ -154,9 +154,9 @@ impl<U: Default + std::marker::Copy + std::fmt::Debug> HashTable<U> for CuckooHa
     /// delete means finding the value in either primary or
     /// secondary tables and clearing it, which is O(1)
     fn delete(&mut self, key: u16) -> Result<(), HashTableError> {
-        let x: usize = self.hash(key.clone()).into();
+        let x: usize = self.hash(key).into();
         if self.primary[x].data.is_none() || self.primary[x].key != key {
-            let x: usize = self.secondary_hash(key.clone()).into();
+            let x: usize = self.secondary_hash(key).into();
             if self.secondary[x].data.is_none() || self.secondary[x].key != key {
                 // not found
                 return Ok(());
@@ -178,9 +178,9 @@ impl<U: Default + std::marker::Copy + std::fmt::Debug> HashTable<U> for CuckooHa
     where
         U: Copy,
     {
-        let x: usize = self.hash(key.clone()).into();
+        let x: usize = self.hash(key).into();
         if self.primary[x].data.is_none() || self.primary[x].key != key {
-            let x: usize = self.secondary_hash(key.clone()).into();
+            let x: usize = self.secondary_hash(key).into();
             if self.secondary[x].data.is_none() || self.secondary[x].key != key {
                 return Err(HashTableError::NotFound);
             } else {

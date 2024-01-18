@@ -49,9 +49,9 @@ impl<U: Default> BasicHashBuilder<U> {
 
 impl<U: std::marker::Copy + std::fmt::Debug> HashTable<U> for BasicHash<U> {
     fn insert(&mut self, key: u16, data: U) -> Result<(), HashTableError> {
-        let x : usize = self.hash(key.clone()).into();
+        let x : usize = self.hash(key).into();
         if self.data[x].data.is_none() {
-            self.data[x].key = key.clone();
+            self.data[x].key = key;
             self.data[x].data = Some(Box::new(data));
         } else {
             let mut y = x + 1;
@@ -61,7 +61,7 @@ impl<U: std::marker::Copy + std::fmt::Debug> HashTable<U> for BasicHash<U> {
             let mut inserted = false;
             while inserted == false && y != x {
                 if self.data[y].data.is_none() {
-                    self.data[y].key = key.clone();
+                    self.data[y].key = key;
                     self.data[y].data = Some(Box::new(data));
                     inserted = true;
                     break;
@@ -90,7 +90,7 @@ impl<U: std::marker::Copy + std::fmt::Debug> HashTable<U> for BasicHash<U> {
     }
     fn lookup(&self, key: u16) -> Result<U, HashTableError> 
         where U : Copy {
-        let x : usize = self.hash(key.clone()).into();
+        let x : usize = self.hash(key).into();
         if self.data[x].data.is_none() {
             return Err(HashTableError::NotFound);
         }
