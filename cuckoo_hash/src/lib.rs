@@ -234,15 +234,23 @@ impl<U: Default + std::fmt::Debug + std::marker::Copy> CuckooHash<U> {
 
         // iterate the list of entries and re-add them to the hash table
 
+        // unwrap is safe in below code because we have Some(_)
+
         for mut val in p {
-            if val.data.is_some() {
-                self.insert(val.key, *mem::take(&mut val.data).unwrap())?;
+            match val.data {
+                Some(_) => { 
+                    self.insert(val.key, *mem::take(&mut val.data).unwrap())?;
+                },
+                _ => {},
             }
         }
 
         for mut val in s {
-            if val.data.is_some() {
-                self.insert(val.key, *mem::take(&mut val.data).unwrap())?;
+            match val.data {
+                Some(_) => { 
+                    self.insert(val.key, *mem::take(&mut val.data).unwrap())?;
+                },
+                _ => {},
             }
         }
 
