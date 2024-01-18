@@ -19,7 +19,7 @@ impl<U: Default> Default for HashTableEntry<U> {
     }
 }
 
-pub trait HashTable<U> where U: Copy {
+pub trait HashTable<U> {
     fn insert(&mut self, key: u16, data: U) -> Result<(), HashTableError>;
     fn delete(&mut self, key: u16) -> Result<(), HashTableError>;
     fn lookup(&self, key: u16) -> Result<U, HashTableError>;
