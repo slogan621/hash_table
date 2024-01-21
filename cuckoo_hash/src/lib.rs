@@ -113,6 +113,7 @@ impl<U: Default + std::marker::Copy> CuckooHashBuilder<U> {
 }
 
 impl<U: Default + std::marker::Copy + std::fmt::Debug> HashTable<U> for CuckooHash<U> {
+
     fn insert(&mut self, key: u16, data: U) -> Result<(), HashTableError> {
         let ret = self.lookup(key);
         if ret.is_ok() {
@@ -146,8 +147,16 @@ impl<U: Default + std::marker::Copy + std::fmt::Debug> HashTable<U> for CuckooHa
             p_key = temp_key;
             p_data = temp_data;
         }
-        self.rehash()?;
-        self.insert(p_key, p_data)?;
+        // was unable to insert after some number of attempts
+        // see if we can insert in stash. If not, then rehash
+        // everything and try again from the top
+        match self.insert_stash(p_key, p_data) {
+            Ok(_) => {},
+            _ => {
+                self.rehash()?;
+                self.insert(p_key, p_data)?;
+            },
+        }
         Ok(())
     }
 
@@ -158,7 +167,8 @@ impl<U: Default + std::marker::Copy + std::fmt::Debug> HashTable<U> for CuckooHa
         if self.primary[x].data.is_none() || self.primary[x].key != key {
             let x: usize = self.secondary_hash(key).into();
             if self.secondary[x].data.is_none() || self.secondary[x].key != key {
-                // not found
+                // delete stash, if present
+                self.delete_stash(key); 
                 return Ok(());
             } else {
                 let h = HashTableEntry::<U>::default();
@@ -182,7 +192,18 @@ impl<U: Default + std::marker::Copy + std::fmt::Debug> HashTable<U> for CuckooHa
         if self.primary[x].data.is_none() || self.primary[x].key != key {
             let x: usize = self.secondary_hash(key).into();
             if self.secondary[x].data.is_none() || self.secondary[x].key != key {
-                return Err(HashTableError::NotFound);
+                // check the stash
+                match self.lookup_stash(key).into() {
+                    Ok(index) => {return Ok(**self.stash[index].data.as_ref().unwrap());},
+                    Err(_) => {return Err(HashTableError::NotFound);},
+                };
+/*
+                let index: usize = self.lookup_stash(key).into() {
+                    return Ok(**self.stash[index].data.as_ref().unwrap());
+                } else {
+                    return Err(HashTableError::NotFound);
+                }
+*/
             } else {
                 return Ok(**self.secondary[x].data.as_ref().unwrap());
             }
@@ -199,6 +220,44 @@ impl<U: std::marker::Copy> HashFn for CuckooHash<U> {
 }
 
 impl<U: Default + std::fmt::Debug + std::marker::Copy> CuckooHash<U> {
+
+    fn lookup_stash(&self, key: u16) -> Result<usize, HashTableError> {
+        for i in 0..self.stash_capacity as usize {
+            let ent = &self.stash[i];
+            if ent.data.is_some() && ent.key == key {
+                // already exists
+                return Ok(i);   
+            }
+        }
+        return Err(HashTableError::NotFound);
+    }
+
+    fn delete_stash(&mut self, key: u16) {
+        for i in 0..self.stash_capacity as usize {
+            let ent = &self.stash[i];
+            if ent.data.is_some() && ent.key == key {
+                let h = HashTableEntry::<U>::default();
+                self.stash[i] = h;
+                break;
+            }
+        }
+    }
+
+    fn insert_stash(&mut self, key: u16, data: U) -> Result<(), HashTableError> {
+        if self.lookup_stash(key).is_ok() {
+            return Ok(());
+        }
+        for i in 0..self.stash_capacity as usize {
+            let ent = &self.stash[i];
+            if ent.data.is_none() {
+                self.stash[i].key = key;
+                self.stash[i].data = Some(Box::new(data));
+                return Ok(());   
+            }
+        }
+        return Err(HashTableError::TableFull); 
+    }
+
     fn initialize_hash_tables(&mut self) {
         // initialize the primary and secondary hash tables
         for _i in 0..self.hash_capacity {
